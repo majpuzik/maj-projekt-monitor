@@ -1,0 +1,1 @@
+/home/puzik/CLAUDE_SMART_README.md

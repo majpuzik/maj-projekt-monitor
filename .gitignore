@@ -1,0 +1,53 @@
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Large data files
+*.zip
+ccc_database/
+*.csv
+
+# Logs
+*.log
+nohup.out
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Conda
+miniconda3/
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+
+# Screen sessions
+.screen/
