@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAJ-PROJEKT-MONITOR - Projektová Dokumentace</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.95;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .nav {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 3px solid #667eea;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .nav a:hover {
+            color: #764ba2;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.6em;
+            margin: 30px 0 15px 0;
+        }
+
+        .diagram-container {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border: 2px solid #e5e7eb;
+        }
+
+        .diagram-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .mermaid {
+            text-align: center;
+        }
+
+        .info-box {
+            background: #e0e7ff;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .success-box {
+            background: #d1fae5;
+            border-left: 5px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+
+        table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .component-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .component-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+
+        .component-card h4 {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+
+        .component-card .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .badge-core { background: #dbeafe; color: #1e40af; }
+        .badge-bot { background: #fce7f3; color: #831843; }
+        .badge-web { background: #d1fae5; color: #065f46; }
+        .badge-script { background: #fef3c7; color: #92400e; }
+
+        code {
+            background: #f3f4f6;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+            border-bottom: 2px dotted #667eea;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 300px;
+            background-color: #1f2937;
+            color: #fff;
+            text-align: left;
+            border-radius: 8px;
+            padding: 15px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        footer {
+            background: #1f2937;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 60px;
+        }
+
+        @media print {
+            .nav { display: none; }
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 MAJ-PROJEKT-MONITOR</h1>
+            <p class="subtitle">Comprehensive Project Lifecycle Management System</p>
+            <div class="version-badge">Version 1.0.0 | 2025-12-03</div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="nav">
+            <ul>
+                <li><a href="#prehled">Přehled</a></li>
+                <li><a href="#architektura">Architektura</a></li>
+                <li><a href="#sit">Síťová Instalace</a></li>
+                <li><a href="#dataflow">Data Flow</a></li>
+                <li><a href="#komponenty">Komponenty</a></li>
+                <li><a href="#databaze">Databáze</a></li>
+                <li><a href="#api">API</a></li>
+                <li><a href="#instalace">Instalace</a></li>
+            </ul>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+
+            <!-- Section: Přehled -->
+            <div class="section" id="prehled">
+                <h2>📋 Přehled Projektu</h2>
+
+                <div class="info-box">
+                    <strong>MAJ-PROJEKT-MONITOR</strong> je komplexní automatizovaný systém pro správu
+                    celého životního cyklu softwarových projektů - od zrození (plánování) až po produkci
+                    a následnou údržbu.
+                </div>
+
+                <div class="grid">
+                    <div class="stat-card">
+                        <div class="number">4</div>
+                        <div class="label">Hlavní Komponenty</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">9</div>
+                        <div class="label">Databázových Tabulek</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">7</div>
+                        <div class="label">Životních Fází</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">100%</div>
+                        <div class="label">Cílové Kvality</div>
+                    </div>
+                </div>
+
+                <h3>Klíčové Funkce</h3>
+                <table>
+                    <tr>
+                        <th>Funkce</th>
+                        <th>Popis</th>
+                        <th>Frekvence</th>
+                    </tr>
+                    <tr>
+                        <td>🔍 Automatická Analýza</td>
+                        <td>Vyhodnocení stavu projektu, kvality, testů</td>
+                        <td>Každou hodinu</td>
+                    </tr>
+                    <tr>
+                        <td>🧪 Test Management</td>
+                        <td>Spouštění a vyhodnocení testů</td>
+                        <td>Každých 30 minut</td>
+                    </tr>
+                    <tr>
+                        <td>📊 Quality Scoring</td>
+                        <td>Bodování kvality (0-100%)</td>
+                        <td>Každé 2 hodiny</td>
+                    </tr>
+                    <tr>
+                        <td>🔄 Phase Management</td>
+                        <td>Automatické přechody mezi fázemi</td>
+                        <td>Dle podmínek</td>
+                    </tr>
+                    <tr>
+                        <td>📈 Real-time Monitoring</td>
+                        <td>Živé sledování průběhu</td>
+                        <td>Každých 5 sekund</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section: Architektura -->
+            <div class="section" id="architektura">
+                <h2>🏗️ Architektura Systému</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Celková Architektura</div>
+                    <div class="mermaid">
+graph TB
+    subgraph "Presentation Layer"
+        GUI[Web GUI Dashboard<br/>Port 5050]
+        CLI[CLI Interface<br/>Command Line]
+    end
+
+    subgraph "Application Layer"
+        CORE[Core System<br/>maj-projekt-monitor.py]
+        BOT[Autonomous Bot<br/>maj-projekt-monitor-bot.py]
+        WEB[Web Server<br/>maj-projekt-monitor-web.py]
+    end
+
+    subgraph "Data Layer"
+        CDB[(Central Database<br/>SQLite CDB)]
+        FILES[Project Files<br/>Git Repos]
+    end
+
+    subgraph "External Systems"
+        GITHUB[GitHub<br/>Repositories]
+        CLAUDE[Claude CLI<br/>Integration]
+    end
+
+    GUI --> WEB
+    CLI --> CORE
+    WEB --> CORE
+    BOT --> CORE
+    CORE --> CDB
+    BOT --> FILES
+    CORE --> FILES
+    CORE --> GITHUB
+    CLAUDE --> CDB
+
+    style GUI fill:#d1fae5
+    style WEB fill:#fce7f3
+    style CORE fill:#dbeafe
+    style BOT fill:#fef3c7
+    style CDB fill:#e0e7ff
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Struktura Komponent</div>
+                    <div class="mermaid">
+classDiagram
+    class ProjectMonitor {
+        +create_new_project()
+        +scan_project_files()
+        +run_analysis()
+        +get_project_status()
+    }
+
+    class ProjectDatabase {
+        +create_project()
+        +add_program()
+        +add_test()
+        +add_todo()
+        +add_quality_score()
+    }
+
+    class ProjectBot {
+        +hourly_analysis()
+        +run_project_tests()
+        +assess_quality()
+        +check_phase_transition()
+    }
+
+    class WebServer {
+        +get_projects()
+        +get_project_detail()
+        +real_time_updates()
+    }
+
+    ProjectMonitor --> ProjectDatabase
+    ProjectBot --> ProjectMonitor
+    WebServer --> ProjectMonitor
+                    </div>
+                </div>
+
+                <h3>Vrstvová Architektura</h3>
+                <div class="component-card">
+                    <h4>Presentation Layer (Prezentační vrstva)</h4>
+                    <span class="badge badge-web">Web GUI</span>
+                    <span class="badge badge-script">CLI</span>
+                    <p>Zodpovědná za interakci s uživatelem. Obsahuje web dashboard (Flask)
+                    a command-line interface pro přímé ovládání.</p>
+                </div>
+
+                <div class="component-card">
+                    <h4>Application Layer (Aplikační vrstva)</h4>
+                    <span class="badge badge-core">Core</span>
+                    <span class="badge badge-bot">Bot</span>
+                    <span class="badge badge-web">Web Server</span>
+                    <p>Hlavní business logika systému. Core poskytuje API, Bot řídí automatizaci,
+                    Web Server zajišťuje real-time komunikaci.</p>
+                </div>
+
+                <div class="component-card">
+                    <h4>Data Layer (Datová vrstva)</h4>
+                    <span class="badge badge-core">CDB</span>
+                    <span class="badge badge-core">Files</span>
+                    <p>Persistence dat v centrální SQLite databázi a přímý přístup k projektovým souborům.</p>
+                </div>
+            </div>
+
+            <!-- Section: Síťová Instalace -->
+            <div class="section" id="sit">
+                <h2>🌐 Síťová Instalace</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Topologie Sítě - DGX Deployment</div>
+                    <div class="mermaid">
+graph LR
+    subgraph "Internal Network 192.168.10.0/24"
+        DGX[DGX Workstation<br/>192.168.10.200<br/>MAJ-PROJEKT-MONITOR]
+        NAS5[Synology NAS5<br/>192.168.10.35<br/>Backup Storage]
+        MAC1[Mac Mini M4<br/>192.168.10.69<br/>Development]
+        MAC2[MacBook Pro<br/>192.168.10.68<br/>Testing]
+        ROUTER[UniFi Router<br/>192.168.10.1<br/>Gateway]
+    end
+
+    subgraph "External"
+        GITHUB[GitHub<br/>Repositories]
+        INTERNET[Internet]
+    end
+
+    USER[User Browser<br/>Any Device] -->|HTTP:5050| DGX
+    DGX -->|WebSocket| USER
+    DGX -->|NFS/SMB| NAS5
+    DGX -->|SSH/rsync| MAC1
+    DGX -->|SSH/rsync| MAC2
+    DGX -->|Port 80/443| ROUTER
+    ROUTER -->|NAT| INTERNET
+    DGX <-->|Git| GITHUB
+
+    style DGX fill:#667eea,color:#fff
+    style USER fill:#10b981,color:#fff
+    style NAS5 fill:#f59e0b
+    style GITHUB fill:#764ba2,color:#fff
+                    </div>
+                </div>
+
+                <h3>Port Mapping</h3>
+                <table>
+                    <tr>
+                        <th>Service</th>
+                        <th>Port</th>
+                        <th>Protocol</th>
+                        <th>Popis</th>
+                    </tr>
+                    <tr>
+                        <td>Web Dashboard</td>
+                        <td>5050</td>
+                        <td>HTTP/WebSocket</td>
+                        <td>Hlavní GUI interface</td>
+                    </tr>
+                    <tr>
+                        <td>CDB SQLite</td>
+                        <td>File System</td>
+                        <td>Local</td>
+                        <td>/home/puzik/almquist-central-log/almquist.db</td>
+                    </tr>
+                    <tr>
+                        <td>NAS5 NFS</td>
+                        <td>2049</td>
+                        <td>NFS</td>
+                        <td>Backup storage</td>
+                    </tr>
+                    <tr>
+                        <td>SSH</td>
+                        <td>22</td>
+                        <td>SSH</td>
+                        <td>Remote management</td>
+                    </tr>
+                </table>
+
+                <div class="warning-box">
+                    <strong>⚠️ Bezpečnost:</strong> Web dashboard běží bez autentizace a je určen pouze
+                    pro lokální síť. Pro produkční nasazení implementujte HTTPS a autentizaci.
+                </div>
+            </div>
+
+            <!-- Section: Data Flow -->
+            <div class="section" id="dataflow">
+                <h2>🔄 Data Flow Diagramy</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Tok Dat - Project Creation</div>
+                    <div class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant CLI as CLI/Web GUI
+    participant CORE as Core System
+    participant DB as CDB Database
+    participant FS as File System
+    participant GIT as GitHub
+
+    U->>CLI: create_project(name, path, ...)
+    CLI->>CORE: ProjectMonitor.create_new_project()
+    CORE->>DB: INSERT INTO projects
+    DB-->>CORE: project_id
+    CORE->>DB: INSERT INTO events (project_created)
+    CORE->>DB: INSERT INTO project_todos (initial task)
+    CORE-->>CLI: project_id
+    CLI->>U: ✓ Project created
+
+    U->>CLI: scan_project(project_id)
+    CLI->>CORE: scan_project_files()
+    CORE->>FS: Read project directory
+    FS-->>CORE: File list
+    loop For each file
+        CORE->>FS: Read file metadata
+        CORE->>GIT: git log (optional)
+        CORE->>DB: INSERT INTO project_programs
+    end
+    CORE-->>CLI: ✓ Scan complete
+    CLI->>U: X programs registered
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Tok Dat - Autonomous Bot Analysis</div>
+                    <div class="mermaid">
+sequenceDiagram
+    participant SCHED as Scheduler (hourly)
+    participant BOT as Project Bot
+    participant CORE as Core System
+    participant DB as CDB Database
+    participant FS as File System
+    participant WS as WebSocket
+
+    SCHED->>BOT: Trigger hourly_analysis()
+    BOT->>DB: SELECT active projects
+    DB-->>BOT: project_ids[]
+
+    loop For each project
+        BOT->>CORE: run_analysis(project_id)
+        CORE->>DB: Get TODOs
+        CORE->>DB: Get Tests
+        CORE->>DB: Get Quality Scores
+        CORE-->>BOT: AnalysisResult
+
+        BOT->>BOT: Calculate metrics
+        BOT->>DB: INSERT INTO project_analysis
+
+        alt Quality threshold met
+            BOT->>CORE: update_project_phase()
+            CORE->>DB: UPDATE projects SET phase
+            BOT->>CORE: create_phase_todos()
+            CORE->>DB: INSERT INTO project_todos
+        end
+
+        BOT->>WS: Emit project_update event
+        WS-->>Browser: Real-time update
+    end
+                    </div>
+                </div>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Tok Dat - Test Execution</div>
+                    <div class="mermaid">
+graph TD
+    START[Test Trigger] --> CHECK{Project Path Exists?}
+    CHECK -->|Yes| PYTEST{pytest found?}
+    CHECK -->|No| END[Skip]
+
+    PYTEST -->|Yes| RUN_PYTEST[Run pytest]
+    PYTEST -->|No| NPM{npm test?}
+
+    NPM -->|Yes| RUN_NPM[Run npm test]
+    NPM -->|No| END
+
+    RUN_PYTEST --> PARSE_PY[Parse Results]
+    RUN_NPM --> PARSE_NPM[Parse Results]
+
+    PARSE_PY --> RECORD[Record to CDB]
+    PARSE_NPM --> RECORD
+
+    RECORD --> LOG[Log Results]
+    LOG --> NOTIFY{Tests Failed?}
+
+    NOTIFY -->|Yes| ALERT[Send Alert]
+    NOTIFY -->|No| SUCCESS[Update Quality Score]
+
+    ALERT --> UPDATE[Update Analysis]
+    SUCCESS --> UPDATE
+    UPDATE --> END
+
+    style START fill:#10b981
+    style END fill:#667eea
+    style ALERT fill:#ef4444,color:#fff
+    style SUCCESS fill:#10b981,color:#fff
+                    </div>
+                </div>
+
+                <h3>Data Flow Patterns</h3>
+
+                <div class="component-card">
+                    <h4>1. Event-Driven Updates</h4>
+                    <p><strong>Pattern:</strong>
+                    <span class="tooltip">Event Source<span class="tooltiptext">
+                        Bot nebo User action vytvoří událost (test complete, phase change)
+                    </span></span> →
+                    <span class="tooltip">CDB Events<span class="tooltiptext">
+                        Událost se zaznamená do tabulky events s metadata
+                    </span></span> →
+                    <span class="tooltip">WebSocket<span class="tooltiptext">
+                        Real-time notifikace všem připojeným klientům
+                    </span></span> →
+                    <span class="tooltip">GUI Update<span class="tooltiptext">
+                        Dashboard se automaticky aktualizuje bez refresh
+                    </span></span>
+                    </p>
+                </div>
+
+                <div class="component-card">
+                    <h4>2. Scheduled Analysis</h4>
+                    <p><strong>Pattern:</strong>
+                    <span class="tooltip">Scheduler<span class="tooltiptext">
+                        Python schedule library - každou hodinu
+                    </span></span> →
+                    <span class="tooltip">Bot Analysis<span class="tooltiptext">
+                        Bot projde všechny aktivní projekty
+                    </span></span> →
+                    <span class="tooltip">Quality Calculation<span class="tooltiptext">
+                        Vypočítá code quality, test coverage, documentation, security
+                    </span></span> →
+                    <span class="tooltip">CDB Storage<span class="tooltiptext">
+                        Uloží výsledky do project_analysis tabulky
+                    </span></span> →
+                    <span class="tooltip">Recommendations<span class="tooltiptext">
+                        Generuje doporučení pro zlepšení
+                    </span></span>
+                    </p>
+                </div>
+
+                <div class="component-card">
+                    <h4>3. Phase Transitions</h4>
+                    <p><strong>Pattern:</strong>
+                    <span class="tooltip">Analysis Check<span class="tooltiptext">
+                        Kontrola splnění požadavků pro danou fázi
+                    </span></span> →
+                    <span class="tooltip">Quality Validation<span class="tooltiptext">
+                        Musí být splněno: quality ≥ threshold, všechny TODO done, 0 failed tests
+                    </span></span> →
+                    <span class="tooltip">Phase Update<span class="tooltiptext">
+                        UPDATE projects SET phase = next_phase
+                    </span></span> →
+                    <span class="tooltip">Create TODOs<span class="tooltiptext">
+                        Automatické vytvoření TODO úkolů pro novou fázi
+                    </span></span> →
+                    <span class="tooltip">Event Log<span class="tooltiptext">
+                        Zaznamená phase_changed do events
+                    </span></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Section: Komponenty -->
+            <div class="section" id="komponenty">
+                <h2>⚙️ Popis Komponent</h2>
+
+                <h3>1. Core System (maj-projekt-monitor.py)</h3>
+                <div class="component-card">
+                    <span class="badge badge-core">CORE</span>
+                    <span class="badge" style="background:#e0e7ff;color:#3730a3;">2,874 lines</span>
+                    <h4>Hlavní Komponenta Systému</h4>
+
+                    <p><strong>Zodpovědnosti:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>✅ Databázové operace (CRUD)</li>
+                        <li>✅ Project lifecycle management</li>
+                        <li>✅ File scanning & metadata extraction</li>
+                        <li>✅ Git integration</li>
+                        <li>✅ Analysis execution</li>
+                        <li>✅ CLI interface</li>
+                    </ul>
+
+                    <p style="margin-top: 15px;"><strong>Klíčové Třídy:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li><code>ProjectDatabase</code> - Database operations</li>
+                        <li><code>ProjectMonitor</code> - Main business logic</li>
+                        <li><code>Project, ProjectProgram, ProjectTest, ProjectTodo</code> - Data models</li>
+                    </ul>
+
+                    <p style="margin-top: 15px;"><strong>API Příkazy:</strong></p>
+                    <pre style="font-size: 0.9em;">python3 maj-projekt-monitor.py create "Name" /path
+python3 maj-projekt-monitor.py scan PROJECT_ID
+python3 maj-projekt-monitor.py analyze PROJECT_ID
+python3 maj-projekt-monitor.py status PROJECT_ID</pre>
+                </div>
+
+                <h3>2. Autonomous Bot (maj-projekt-monitor-bot.py)</h3>
+                <div class="component-card">
+                    <span class="badge badge-bot">BOT</span>
+                    <span class="badge" style="background:#fce7f3;color:#831843;">1,156 lines</span>
+                    <h4>Automatizační Agent</h4>
+
+                    <p><strong>Zodpovědnosti:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>⏰ Hodinová analýza všech projektů</li>
+                        <li>🧪 Automatické spouštění testů (každých 30 min)</li>
+                        <li>📏 Hodnocení kvality kódu (každé 2 hodiny)</li>
+                        <li>🔄 Automatické fázové přechody</li>
+                        <li>🔧 Pokusy o auto-fix běžných problémů</li>
+                        <li>📊 Generování reportů</li>
+                    </ul>
+
+                    <p style="margin-top: 15px;"><strong>Scheduling:</strong></p>
+                    <table>
+                        <tr>
+                            <th>Task</th>
+                            <th>Interval</th>
+                            <th>Function</th>
+                        </tr>
+                        <tr>
+                            <td>Project Analysis</td>
+                            <td>60 min</td>
+                            <td><code>hourly_analysis()</code></td>
+                        </tr>
+                        <tr>
+                            <td>Test Execution</td>
+                            <td>30 min</td>
+                            <td><code>run_project_tests()</code></td>
+                        </tr>
+                        <tr>
+                            <td>Quality Assessment</td>
+                            <td>120 min</td>
+                            <td><code>assess_quality()</code></td>
+                        </tr>
+                        <tr>
+                            <td>Status Report</td>
+                            <td>60 min</td>
+                            <td><code>generate_status_report()</code></td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-top: 15px;"><strong>Použití:</strong></p>
+                    <pre style="font-size: 0.9em;">python3 maj-projekt-monitor-bot.py              # Run forever
+python3 maj-projekt-monitor-bot.py --once       # Run once
+python3 maj-projekt-monitor-bot.py --analyze 1  # Analyze project 1</pre>
+                </div>
+
+                <h3>3. Web Dashboard (maj-projekt-monitor-web.py)</h3>
+                <div class="component-card">
+                    <span class="badge badge-web">WEB</span>
+                    <span class="badge" style="background:#d1fae5;color:#065f46;">751 lines</span>
+                    <h4>Real-time GUI Dashboard</h4>
+
+                    <p><strong>Zodpovědnosti:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>🌐 Flask web server (port 5050)</li>
+                        <li>🔌 WebSocket real-time komunikace</li>
+                        <li>📊 Interaktivní grafy (Chart.js)</li>
+                        <li>🎨 Responsive UI design</li>
+                        <li>🔴🟡🟢 Color-coded status indicators</li>
+                        <li>📡 Background update thread (každých 5 sec)</li>
+                    </ul>
+
+                    <p style="margin-top: 15px;"><strong>REST API Endpoints:</strong></p>
+                    <table>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Method</th>
+                            <th>Popis</th>
+                        </tr>
+                        <tr>
+                            <td><code>/api/projects</code></td>
+                            <td>GET</td>
+                            <td>Všechny projekty</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/project/&lt;id&gt;</code></td>
+                            <td>GET</td>
+                            <td>Detail projektu</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/project/&lt;id&gt;/analysis</code></td>
+                            <td>GET</td>
+                            <td>Historie analýz</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/project/&lt;id&gt;/quality</code></td>
+                            <td>GET</td>
+                            <td>Quality metrics</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/overview</code></td>
+                            <td>GET</td>
+                            <td>System overview</td>
+                        </tr>
+                    </table>
+
+                    <p style="margin-top: 15px;"><strong>Spuštění:</strong></p>
+                    <pre style="font-size: 0.9em;">python3 maj-projekt-monitor-web.py
+# Dashboard: http://192.168.10.200:5050</pre>
+                </div>
+
+                <h3>4. Control Script (maj-projekt-monitor-control.sh)</h3>
+                <div class="component-card">
+                    <span class="badge badge-script">SCRIPT</span>
+                    <span class="badge" style="background:#fef3c7;color:#92400e;">Bash</span>
+                    <h4>Správa Služeb</h4>
+
+                    <p><strong>Příkazy:</strong></p>
+                    <table>
+                        <tr>
+                            <th>Command</th>
+                            <th>Popis</th>
+                        </tr>
+                        <tr>
+                            <td><code>start</code></td>
+                            <td>Start bot + web dashboard</td>
+                        </tr>
+                        <tr>
+                            <td><code>stop</code></td>
+                            <td>Stop všechny služby</td>
+                        </tr>
+                        <tr>
+                            <td><code>restart</code></td>
+                            <td>Restart služeb</td>
+                        </tr>
+                        <tr>
+                            <td><code>status</code></td>
+                            <td>Zobrazit status</td>
+                        </tr>
+                        <tr>
+                            <td><code>bot</code></td>
+                            <td>Start pouze bot</td>
+                        </tr>
+                        <tr>
+                            <td><code>web</code></td>
+                            <td>Start pouze web</td>
+                        </tr>
+                        <tr>
+                            <td><code>create</code></td>
+                            <td>Vytvoření projektu (wizard)</td>
+                        </tr>
+                        <tr>
+                            <td><code>logs</code></td>
+                            <td>Sledování logů</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section: Databáze -->
+            <div class="section" id="databaze">
+                <h2>🗄️ Databázová Struktura</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Entity Relationship Diagram</div>
+                    <div class="mermaid">
+erDiagram
+    PROJECTS ||--o{ PROJECT_PROGRAMS : contains
+    PROJECTS ||--o{ PROJECT_TESTS : has
+    PROJECTS ||--o{ PROJECT_TODOS : tracks
+    PROJECTS ||--o{ PROJECT_QUALITY_SCORES : evaluated
+    PROJECTS ||--o{ PROJECT_ANALYSIS : analyzed
+    PROJECTS ||--o{ PROJECT_DEPLOYMENTS : deployed
+    PROJECTS ||--o{ PROJECT_SECURITY_TESTS : secured
+    PROJECTS ||--o{ PROJECT_GIT_COMMITS : versioned
+    PROJECT_PROGRAMS ||--o{ PROJECT_TESTS : tested
+
+    PROJECTS {
+        int id PK
+        string name UK
+        string description
+        string phase
+        datetime created_at
+        datetime updated_at
+        string github_repo
+        string local_path
+        string customer
+        string environment
+        float quality_score
+        string status
+    }
+
+    PROJECT_PROGRAMS {
+        int id PK
+        int project_id FK
+        string name
+        string path
+        string language
+        int lines_of_code
+        float complexity_score
+        datetime last_modified
+        string git_hash
+    }
+
+    PROJECT_TESTS {
+        int id PK
+        int project_id FK
+        int program_id FK
+        string test_name
+        string test_type
+        string status
+        datetime started_at
+        datetime completed_at
+        float duration_seconds
+        string error_message
+        float coverage_percent
+    }
+
+    PROJECT_TODOS {
+        int id PK
+        int project_id FK
+        string task
+        string status
+        int priority
+        datetime created_at
+        datetime updated_at
+        datetime completed_at
+        string assigned_to
+    }
+                    </div>
+                </div>
+
+                <div class="success-box">
+                    <strong>✓ Database Engine:</strong> SQLite 3<br>
+                    <strong>✓ Location:</strong> /home/puzik/almquist-central-log/almquist.db<br>
+                    <strong>✓ Size:</strong> ~4.8 MB (s MAJ-PROJEKT-MONITOR daty)<br>
+                    <strong>✓ Tables:</strong> 9 hlavních + 1 events (sdílená)
+                </div>
+
+                <h3>Tabulky v Detailu</h3>
+
+                <div class="component-card">
+                    <h4>projects - Hlavní Projektová Tabulka</h4>
+                    <table>
+                        <tr>
+                            <th>Sloupec</th>
+                            <th>Typ</th>
+                            <th>Popis</th>
+                        </tr>
+                        <tr>
+                            <td>id</td>
+                            <td>INTEGER</td>
+                            <td>Primary key, auto-increment</td>
+                        </tr>
+                        <tr>
+                            <td>name</td>
+                            <td>TEXT UNIQUE</td>
+                            <td>Název projektu (unikátní)</td>
+                        </tr>
+                        <tr>
+                            <td>phase</td>
+                            <td>TEXT</td>
+                            <td>planning|design|development|testing|review|deployment|production</td>
+                        </tr>
+                        <tr>
+                            <td>quality_score</td>
+                            <td>REAL</td>
+                            <td>0.0 - 100.0 (průměr všech metrik)</td>
+                        </tr>
+                        <tr>
+                            <td>customer</td>
+                            <td>TEXT</td>
+                            <td>Jméno zákazníka/klienta</td>
+                        </tr>
+                        <tr>
+                            <td>environment</td>
+                            <td>TEXT</td>
+                            <td>development|staging|production</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="component-card">
+                    <h4>project_analysis - Hodinové Analýzy</h4>
+                    <p>Ukládá výsledky každé automatické analýzy projektu. Bot zapisuje záznam každou hodinu.</p>
+                    <table>
+                        <tr>
+                            <th>Sloupec</th>
+                            <th>Význam</th>
+                        </tr>
+                        <tr>
+                            <td>todos_completed</td>
+                            <td>Počet dokončených úkolů</td>
+                        </tr>
+                        <tr>
+                            <td>todos_remaining</td>
+                            <td>Počet zbývajících úkolů</td>
+                        </tr>
+                        <tr>
+                            <td>tests_passed</td>
+                            <td>Počet úspěšných testů</td>
+                        </tr>
+                        <tr>
+                            <td>tests_failed</td>
+                            <td>Počet neúspěšných testů</td>
+                        </tr>
+                        <tr>
+                            <td>progress_percent</td>
+                            <td>Celkový progress (0-100%)</td>
+                        </tr>
+                        <tr>
+                            <td>recommendations</td>
+                            <td>JSON array doporučení pro zlepšení</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section: API -->
+            <div class="section" id="api">
+                <h2>🔌 API Reference</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">API Request Flow</div>
+                    <div class="mermaid">
+sequenceDiagram
+    participant C as Client (Browser)
+    participant F as Flask Server
+    participant M as ProjectMonitor
+    participant D as Database
+    participant W as WebSocket
+
+    Note over C,W: REST API Request
+    C->>F: GET /api/project/1
+    F->>M: get_project_status(1)
+    M->>D: SELECT * FROM projects WHERE id=1
+    M->>D: SELECT * FROM project_programs WHERE project_id=1
+    M->>D: SELECT * FROM project_tests WHERE project_id=1
+    M->>D: SELECT * FROM project_todos WHERE project_id=1
+    D-->>M: Results
+    M-->>F: JSON status
+    F-->>C: HTTP 200 + JSON
+
+    Note over C,W: WebSocket Real-time Update
+    loop Every 5 seconds
+        F->>M: get_all_project_statuses()
+        M->>D: SELECT queries
+        D-->>M: Data
+        M-->>F: Projects data
+        F->>W: Emit 'project_update'
+        W-->>C: Push update to browser
+    end
+                    </div>
+                </div>
+
+                <h3>REST Endpoints Detail</h3>
+
+                <div class="component-card">
+                    <h4>GET /api/projects</h4>
+                    <p><strong>Popis:</strong> Získá seznam všech aktivních projektů</p>
+                    <pre style="font-size: 0.9em;">curl http://192.168.10.200:5050/api/projects</pre>
+                    <p><strong>Response:</strong></p>
+                    <pre style="font-size: 0.85em;">{
+  "projects": [
+    {
+      "id": 1,
+      "name": "MAJ-PROJEKT-MONITOR",
+      "phase": "planning",
+      "quality_score": 33.6,
+      "customer": "Maj",
+      "environment": "development",
+      "created_at": "2025-12-03T18:30:00",
+      "updated_at": "2025-12-03T18:47:00"
+    }
+  ]
+}</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>GET /api/project/&lt;id&gt;</h4>
+                    <p><strong>Popis:</strong> Kompletní detail projektu včetně programů, testů, TODOs</p>
+                    <pre style="font-size: 0.9em;">curl http://192.168.10.200:5050/api/project/1</pre>
+                    <p><strong>Response Structure:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li><code>project</code> - Základní info</li>
+                        <li><code>programs[]</code> - List všech programů/souborů</li>
+                        <li><code>tests[]</code> - Historie testů</li>
+                        <li><code>todos[]</code> - TODO úkoly</li>
+                        <li><code>quality_scores[]</code> - Quality metrics</li>
+                        <li><code>recent_analyses[]</code> - Poslední analýzy</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h4>GET /api/project/&lt;id&gt;/analysis?hours=24</h4>
+                    <p><strong>Popis:</strong> Historie analýz za posledních N hodin</p>
+                    <p><strong>Parameters:</strong></p>
+                    <ul style="margin-left: 20px;">
+                        <li><code>hours</code> (optional) - Počet hodin zpět (default: 24)</li>
+                    </ul>
+                    <pre style="font-size: 0.9em;">curl http://192.168.10.200:5050/api/project/1/analysis?hours=48</pre>
+                </div>
+
+                <h3>WebSocket Events</h3>
+
+                <table>
+                    <tr>
+                        <th>Event</th>
+                        <th>Direction</th>
+                        <th>Payload</th>
+                        <th>Popis</th>
+                    </tr>
+                    <tr>
+                        <td><code>connect</code></td>
+                        <td>Server → Client</td>
+                        <td><code>{message}</code></td>
+                        <td>Potvrzení připojení</td>
+                    </tr>
+                    <tr>
+                        <td><code>project_update</code></td>
+                        <td>Server → Client</td>
+                        <td><code>{projects[], timestamp}</code></td>
+                        <td>Real-time aktualizace (každých 5 sec)</td>
+                    </tr>
+                    <tr>
+                        <td><code>analyze_project</code></td>
+                        <td>Client → Server</td>
+                        <td><code>{project_id}</code></td>
+                        <td>Spustit analýzu projektu</td>
+                    </tr>
+                    <tr>
+                        <td><code>analysis_complete</code></td>
+                        <td>Server → Client</td>
+                        <td><code>{project_id, analysis}</code></td>
+                        <td>Analýza dokončena</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Section: Instalace -->
+            <div class="section" id="instalace">
+                <h2>📦 Instalace a Deployment</h2>
+
+                <div class="diagram-container">
+                    <div class="diagram-title">Installation Flow</div>
+                    <div class="mermaid">
+graph TD
+    START[Start Installation] --> CHECK_PYTHON{Python 3.8+?}
+    CHECK_PYTHON -->|No| INSTALL_PYTHON[Install Python]
+    CHECK_PYTHON -->|Yes| INSTALL_DEPS
+    INSTALL_PYTHON --> INSTALL_DEPS[pip3 install dependencies]
+
+    INSTALL_DEPS --> DOWNLOAD[Download Scripts]
+    DOWNLOAD --> CHMOD[chmod +x control script]
+    CHMOD --> INIT_DB[Initialize Database]
+
+    INIT_DB --> CREATE_PROJ[Create First Project]
+    CREATE_PROJ --> START_WEB[Start Web Dashboard]
+    START_WEB --> START_BOT[Start Bot]
+
+    START_BOT --> VERIFY{Services Running?}
+    VERIFY -->|No| DEBUG[Check Logs]
+    VERIFY -->|Yes| OPEN_GUI[Open GUI in Browser]
+
+    DEBUG --> FIX[Fix Issues]
+    FIX --> START_WEB
+
+    OPEN_GUI --> DONE[✓ Installation Complete]
+
+    style START fill:#10b981,color:#fff
+    style DONE fill:#667eea,color:#fff
+    style DEBUG fill:#ef4444,color:#fff
+                    </div>
+                </div>
+
+                <h3>Krok za Krokem</h3>
+
+                <div class="component-card">
+                    <h4>1. Požadavky</h4>
+                    <pre>Python 3.8 or higher
+SQLite3
+Git (optional, pro GitHub integraci)</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>2. Instalace Dependencí</h4>
+                    <pre>pip3 install flask flask-socketio schedule psutil</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>3. Download & Setup</h4>
+                    <pre># Files jsou už na DGX v /home/puzik/
+cd /home/puzik
+chmod +x maj-projekt-monitor-control.sh
+
+# Inicializace databáze
+python3 maj-projekt-monitor.py</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>4. První Spuštění</h4>
+                    <pre># Start všech služeb
+./maj-projekt-monitor-control.sh start
+
+# Nebo individuálně:
+./maj-projekt-monitor-control.sh bot  # Pouze bot
+./maj-projekt-monitor-control.sh web  # Pouze web</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>5. Vytvoření Projektu</h4>
+                    <pre># Interaktivně
+./maj-projekt-monitor-control.sh create
+
+# Nebo CLI
+python3 maj-projekt-monitor.py create "My Project" /path/to/project \
+    --description "Project description" \
+    --customer "Customer Name"</pre>
+                </div>
+
+                <div class="component-card">
+                    <h4>6. Systemd Service (Optional)</h4>
+                    <p>Pro automatické spuštění při boot:</p>
+                    <pre>sudo tee /etc/systemd/system/maj-projekt-monitor.service &lt;&lt; EOF
+[Unit]
+Description=MAJ-PROJEKT-MONITOR
+After=network.target
+
+[Service]
+Type=forking
+User=puzik
+WorkingDirectory=/home/puzik
+ExecStart=/home/puzik/maj-projekt-monitor-control.sh start
+ExecStop=/home/puzik/maj-projekt-monitor-control.sh stop
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable maj-projekt-monitor
+sudo systemctl start maj-projekt-monitor</pre>
+                </div>
+
+                <h3>Verifikace Instalace</h3>
+
+                <div class="success-box">
+                    <strong>✓ Kontrolní Seznam:</strong>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>[ ] Python 3.8+ nainstalován</li>
+                        <li>[ ] Dependencies nainstalovány (flask, etc.)</li>
+                        <li>[ ] Databáze inicializována</li>
+                        <li>[ ] Bot běží (check: <code>ps aux | grep maj-projekt-monitor-bot</code>)</li>
+                        <li>[ ] Web dashboard běží (check: <code>ss -tulpn | grep 5050</code>)</li>
+                        <li>[ ] GUI dostupné na http://192.168.10.200:5050</li>
+                        <li>[ ] První projekt vytvořen</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Troubleshooting:</strong>
+                    <pre># Check status
+./maj-projekt-monitor-control.sh status
+
+# View logs
+tail -f ~/logs/maj-projekt-monitor-bot.log
+tail -f ~/logs/maj-projekt-monitor-web.log
+
+# Restart services
+./maj-projekt-monitor-control.sh restart</pre>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p><strong>MAJ-PROJEKT-MONITOR</strong> v1.0.0</p>
+            <p>Created by Claude + Maj | 2025-12-03</p>
+            <p>Comprehensive Project Lifecycle Management System</p>
+            <p style="margin-top: 15px; opacity: 0.8;">
+                DGX Workstation | 192.168.10.200 | Port 5050
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#764ba2',
+                lineColor: '#764ba2',
+                secondaryColor: '#d1fae5',
+                tertiaryColor: '#fef3c7'
+            }
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('.nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Print stats
+        console.log('%c🤖 MAJ-PROJEKT-MONITOR Documentation', 'color: #667eea; font-size: 20px; font-weight: bold;');
+        console.log('%cVersion 1.0.0 | Created: 2025-12-03', 'color: #764ba2; font-size: 14px;');
+    </script>
+</body>
+</html>
