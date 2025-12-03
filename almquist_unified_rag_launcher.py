@@ -6,6 +6,7 @@ Univerzální launcher pro všechny RAG domény s LLM podporou
 Podporuje:
 - Legal RAG (zákony, soudní rozhodnutí) - 2159 vektorů
 - Profese RAG (živnosti, profese) - 41 vektorů
+- Corporate RAG (firemní dokumenty z Paperless-NGX) - auto-sync
 - Dotace RAG (připraveno)
 """
 
@@ -30,6 +31,12 @@ class UnifiedRAGLauncher:
                 'description': 'Profese RAG (živnosti, IT freelancers)',
                 'vectors': 41,
                 'status': '✅ Statický'
+            },
+            'corporate': {
+                'rag_dir': '/home/puzik/almquist_corporate_rag',
+                'description': 'Firemní dokumenty (Paperless-NGX)',
+                'vectors': 0,
+                'status': '🔄 Auto-sync z Paperless-NGX'
             },
             'grants': {
                 'rag_dir': '/home/puzik/almquist_grants_rag',

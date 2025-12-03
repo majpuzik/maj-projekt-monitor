@@ -40,6 +40,7 @@ python3 /home/puzik/almquist_unified_rag_launcher.py \
 |--------|---------|--------|-------------|
 | **Legal** | 2,159 | ✅ Active 24/7 | Laws + Court decisions (auto-updated) |
 | **Professions** | 41 | ✅ Active | Business licenses, freelancing, taxes |
+| **Corporate** | 0 | 🔄 Ready | Corporate documents (Paperless-NGX sync) |
 | **Grants** | 0 | 📋 Ready | EU & national grants (ready to deploy) |
 
 ### Quality Metrics (Alexa Prize)
