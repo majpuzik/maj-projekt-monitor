@@ -1,31 +1,49 @@
 #!/usr/bin/env python3
 """
-ALMQUIST Legal Court Decisions Crawler
-Crawls court decisions from Czech courts (NS, ÚS, NSS)
+🔐 ALMQUIST Legal Court Decisions Crawler - ANONYMOUS VERSION
+Crawls court decisions from Czech courts (NS, ÚS, NSS) through Tor network
+
+Changes from original:
+- ✅ Uses AnonymousCrawler base class
+- ✅ All requests go through Tor network
+- ✅ User-Agent rotation
+- ✅ Request timing randomization
+- ✅ Audit logging
+- ✅ IP leak protection
 """
 
-import sqlite3
-import requests
+import psycopg2
+import psycopg2.extras
+import sys
+from pathlib import Path
 from bs4 import BeautifulSoup
 import time
 from datetime import datetime
 import json
 import re
 import shutil
-import sys
 import os
+
+# Add backend to path
+sys.path.insert(0, str(Path.home() / "almquist-pro" / "backend"))
+
+from services.anonymous_crawler_service import AnonymousCrawler
 sys.path.append(os.path.dirname(__file__))
 from almquist_resource_monitor import ResourceMonitor
 
-class CourtDecisionsCrawler:
-    """Crawler for Czech court decisions"""
+class CourtDecisionsCrawler(AnonymousCrawler):
+    """🔐 ANONYMOUS Crawler for Czech court decisions"""
 
-    def __init__(self, db_path="/home/puzik/almquist_legal_sources.db"):
-        self.db_path = db_path
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'ALMQUIST Legal RAG Bot/1.0 (Educational Purpose)'
-        })
+    def __init__(self, db_url="postgresql://almquist_user:almquist_secure_password_2025@localhost:5432/almquist_db"):
+        # Initialize anonymous crawler with Tor
+        super().__init__(
+            name="CourtDecisions",
+            enable_tor=True,
+            min_delay=5.0,
+            max_delay=8.0
+        )
+
+        self.db_url = db_url
         self.pause_between_requests = 5  # 5 seconds between requests (reduced from 30)
         self.resource_monitor = ResourceMonitor(
             cpu_limit=80,
@@ -53,7 +71,8 @@ class CourtDecisionsCrawler:
             print(f"\n   Page {page_num}: {url}")
 
             try:
-                response = self.session.get(url, timeout=30)
+                # Make anonymous request through Tor
+                response = self.get(url, timeout=30)
                 response.raise_for_status()
 
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -132,11 +151,12 @@ class CourtDecisionsCrawler:
         return decisions_found
 
     def crawl_decision_detail(self, decision_info):
-        """Crawl detail of single decision"""
+        """🔐 Crawl detail of single decision (ANONYMOUS via Tor)"""
         url = decision_info['url']
 
         try:
-            response = self.session.get(url, timeout=30)
+            # Make anonymous request through Tor
+            response = self.get(url, timeout=30)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -186,7 +206,7 @@ class CourtDecisionsCrawler:
 
     def save_decision(self, decision_info):
         """Save decision to database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         # Parse date
@@ -208,7 +228,7 @@ class CourtDecisionsCrawler:
 
         cursor.execute('''
         SELECT id FROM court_decisions
-        WHERE ecli = ? OR case_number = ?
+        WHERE ecli = %s OR case_number = %s
         ''', (ecli, case_number))
 
         existing = cursor.fetchone()
@@ -217,15 +237,15 @@ class CourtDecisionsCrawler:
             # Update existing
             cursor.execute('''
             UPDATE court_decisions SET
-                decision_type = ?,
-                decision_date = ?,
-                summary = ?,
-                full_text = ?,
-                keywords = ?,
-                affected_laws = ?,
-                source_url = ?,
+                decision_type = %s,
+                decision_date = %s,
+                summary = %s,
+                full_text = %s,
+                keywords = %s,
+                affected_laws = %s,
+                source_url = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
             ''', (
                 decision_info.get('decision_type'),
                 decision_date,
@@ -245,7 +265,7 @@ class CourtDecisionsCrawler:
                 decision_type, decision_date, ecli,
                 legal_area, affected_laws, keywords,
                 summary, full_text, source_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 decision_info.get('case_number', 'Unknown'),
                 'supreme',
@@ -268,10 +288,18 @@ class CourtDecisionsCrawler:
         return decision_id
 
     def crawl_nsoud_decisions(self, max_pages=5, max_details=20):
-        """Crawl Nejvyšší soud decisions (listing + details)"""
+        """🔐 Crawl Nejvyšší soud decisions (ANONYMOUS via Tor)"""
         print("=" * 70)
-        print("⚖️  NEJVYŠŠÍ SOUD CRAWLER")
+        print("⚖️  NEJVYŠŠÍ SOUD CRAWLER - ANONYMOUS MODE")
         print("=" * 70)
+
+        # Verify anonymity before crawling
+        print("\n🔐 Verifying anonymity...")
+        anonymity_check = self.verify_anonymity()
+        if not anonymity_check.get("tor_working", False):
+            raise RuntimeError(f"❌ ANONYMITY CHECK FAILED: {anonymity_check}")
+
+        print(f"✅ Anonymity verified: IP={anonymity_check.get('current_ip')}")
 
         # Get listing
         decisions = self.crawl_nsoud_listing(max_pages=max_pages)
@@ -315,9 +343,13 @@ class CourtDecisionsCrawler:
         # Log crawl
         self.log_crawl('nsoud_sbirka', 'court_decision', 'success', len(decisions), success_count)
 
+        # Request new Tor identity for next run
+        print("\n🔄 Requesting new Tor circuit for next run...")
+        self.new_identity()
+
         # Summary
         print("\n" + "=" * 70)
-        print("✅ NEJVYŠŠÍ SOUD CRAWL COMPLETED")
+        print("✅ ANONYMOUS NEJVYŠŠÍ SOUD CRAWL COMPLETED")
         print("=" * 70)
         print(f"Success: {success_count}/{len(decisions)}")
         print(f"Failed:  {failed_count}/{len(decisions)}")
@@ -325,12 +357,12 @@ class CourtDecisionsCrawler:
 
     def log_crawl(self, source, source_type, status, items_found, items_added, error_message=None):
         """Log crawl to history"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         cursor.execute('''
         INSERT INTO crawl_history (source, source_type, status, items_found, items_added, error_message)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ''', (source, source_type, status, items_found, items_added, error_message))
 
         conn.commit()
@@ -338,7 +370,7 @@ class CourtDecisionsCrawler:
 
     def show_stats(self):
         """Show database statistics"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         print("\n📊 Court Decisions Database Statistics:")

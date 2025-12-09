@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """
-ALMQUIST Legal Laws Crawler
-Crawls Czech laws from zakonyprolidi.cz
+🔐 ALMQUIST Legal Laws Crawler - ANONYMOUS VERSION
+Crawls Czech laws from zakonyprolidi.cz through Tor network
+
+Changes from original:
+- ✅ Uses AnonymousCrawler base class
+- ✅ All requests go through Tor network
+- ✅ User-Agent rotation
+- ✅ Request timing randomization
+- ✅ Audit logging
+- ✅ IP leak protection
 """
 
-import sqlite3
-import requests
+import psycopg2
+import psycopg2.extras
+import sys
+from pathlib import Path
 from bs4 import BeautifulSoup
 import time
 import hashlib
@@ -13,15 +23,24 @@ from datetime import datetime
 import json
 import re
 
-class LegalLawsCrawler:
-    """Crawler for Czech laws"""
+# Add backend to path
+sys.path.insert(0, str(Path.home() / "almquist-pro" / "backend"))
 
-    def __init__(self, db_path="/home/puzik/almquist_legal_sources.db"):
-        self.db_path = db_path
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'ALMQUIST Legal RAG Bot/1.0 (Educational Purpose)'
-        })
+from services.anonymous_crawler_service import AnonymousCrawler
+
+class LegalLawsCrawler(AnonymousCrawler):
+    """🔐 ANONYMOUS Crawler for Czech laws"""
+
+    def __init__(self, db_url="postgresql://almquist_user:almquist_secure_password_2025@localhost:5432/almquist_db"):
+        # Initialize anonymous crawler with Tor
+        super().__init__(
+            name="LegalLaws",
+            enable_tor=True,
+            min_delay=2.0,
+            max_delay=4.0
+        )
+
+        self.db_url = db_url
 
         # Priority laws to crawl
         self.priority_laws = [
@@ -182,7 +201,7 @@ class LegalLawsCrawler:
         ]
 
     def crawl_law(self, law_info):
-        """Crawl single law from zakonyprolidi.cz"""
+        """🔐 Crawl single law from zakonyprolidi.cz (ANONYMOUS via Tor)"""
         law_number = law_info['number']
         # URL format: /cs/[year]-[number] (e.g., 89/2012 -> /cs/2012-89)
         number, year = law_number.split('/')
@@ -192,7 +211,8 @@ class LegalLawsCrawler:
         print(f"   URL: {url}")
 
         try:
-            response = self.session.get(url, timeout=30)
+            # Make anonymous request through Tor
+            response = self.get(url, timeout=30)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -283,27 +303,27 @@ class LegalLawsCrawler:
 
     def save_law(self, law_data):
         """Save law to database"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         # Check if law already exists
-        cursor.execute('SELECT id FROM laws WHERE law_number = ?', (law_data['law_number'],))
+        cursor.execute('SELECT id FROM laws WHERE law_number = %s', (law_data['law_number'],))
         existing = cursor.fetchone()
 
         if existing:
             # Update existing
             cursor.execute('''
             UPDATE laws SET
-                law_name = ?,
-                law_type = ?,
-                category = ?,
-                full_text = ?,
-                effective_from = ?,
-                effective_to = ?,
-                last_amendment = ?,
-                source_url = ?,
+                law_name = %s,
+                law_type = %s,
+                category = %s,
+                full_text = %s,
+                effective_from = %s,
+                effective_to = %s,
+                last_amendment = %s,
+                source_url = %s,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE law_number = ?
+            WHERE law_number = %s
             ''', (
                 law_data['law_name'],
                 law_data['law_type'],
@@ -323,7 +343,7 @@ class LegalLawsCrawler:
                 law_number, law_name, law_type, category,
                 full_text, effective_from, effective_to,
                 last_amendment, source_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 law_data['law_number'],
                 law_data['law_name'],
@@ -344,23 +364,31 @@ class LegalLawsCrawler:
 
     def log_crawl(self, source, source_type, status, items_found, items_added, error_message=None):
         """Log crawl to history"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         cursor.execute('''
         INSERT INTO crawl_history (source, source_type, status, items_found, items_added, error_message)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s)
         ''', (source, source_type, status, items_found, items_added, error_message))
 
         conn.commit()
         conn.close()
 
     def crawl_all_priority_laws(self):
-        """Crawl all priority laws"""
+        """🔐 Crawl all priority laws (ANONYMOUS via Tor)"""
         print("=" * 70)
-        print("🏛️  ALMQUIST LEGAL LAWS CRAWLER")
+        print("🏛️  ALMQUIST LEGAL LAWS CRAWLER - ANONYMOUS MODE")
         print("=" * 70)
         print(f"\nCrawling {len(self.priority_laws)} priority laws from zakonyprolidi.cz")
+
+        # Verify anonymity before crawling
+        print("\n🔐 Verifying anonymity...")
+        anonymity_check = self.verify_anonymity()
+        if not anonymity_check.get("tor_working", False):
+            raise RuntimeError(f"❌ ANONYMITY CHECK FAILED: {anonymity_check}")
+
+        print(f"✅ Anonymity verified: IP={anonymity_check.get('current_ip')}")
 
         success_count = 0
         failed_count = 0
@@ -377,9 +405,13 @@ class LegalLawsCrawler:
             # Be nice to the server
             time.sleep(2)
 
+        # Request new Tor identity for next run
+        print("\n🔄 Requesting new Tor circuit for next run...")
+        self.new_identity()
+
         # Summary
         print("\n" + "=" * 70)
-        print("✅ CRAWL COMPLETED")
+        print("✅ ANONYMOUS CRAWL COMPLETED")
         print("=" * 70)
         print(f"Success: {success_count}/{len(self.priority_laws)}")
         print(f"Failed:  {failed_count}/{len(self.priority_laws)}")
@@ -387,7 +419,7 @@ class LegalLawsCrawler:
 
     def show_stats(self):
         """Show database statistics"""
-        conn = sqlite3.connect(self.db_path)
+        conn = psycopg2.connect(self.db_url)
         cursor = conn.cursor()
 
         print("\n📊 Laws Database Statistics:")

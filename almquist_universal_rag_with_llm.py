@@ -388,6 +388,54 @@ ODPOVĚĎ:"""
 
         print(f"\n{'='*70}\n")
 
+    def add_document(self, text: str, metadata: Dict[str, Any]) -> int:
+        """
+        Add a new document to RAG
+
+        Args:
+            text: Document text content
+            metadata: Document metadata
+
+        Returns:
+            Index of added document
+        """
+        # Embed document
+        embedding = self.model.encode(
+            [text],
+            convert_to_numpy=True,
+            normalize_embeddings=True
+        )
+
+        # Add to FAISS index
+        self.index.add(embedding.astype('float32'))
+
+        # Add to chunks and metadata
+        self.chunks.append(text)
+        self.metadata.append(metadata)
+
+        return len(self.chunks) - 1
+
+    def save(self):
+        """Save RAG to disk"""
+        # Save FAISS index
+        index_path = self.rag_dir / "faiss_index.bin"
+        faiss.write_index(self.index, str(index_path))
+
+        # Save metadata
+        metadata_obj = {
+            'chunks': self.chunks,
+            'metadata': self.metadata,
+            'updated_at': datetime.now().isoformat(),
+            'domain': self.domain,
+            'embedding_model': 'paraphrase-multilingual-MiniLM-L12-v2'
+        }
+
+        metadata_path = self.rag_dir / "metadata.json"
+        with open(metadata_path, 'w', encoding='utf-8') as f:
+            json.dump(metadata_obj, f, ensure_ascii=False, indent=2)
+
+        print(f"✅ RAG saved: {self.index.ntotal} vectors, {len(self.chunks)} chunks")
+
 
 def main():
     """Example usage"""

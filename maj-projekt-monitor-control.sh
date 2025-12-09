@@ -63,9 +63,12 @@ print_info() {
     echo -e "${YELLOW}ℹ $1${NC}"
 }
 
+PYTHON="/home/puzik/miniconda3/bin/python3"
+PIP="/home/puzik/miniconda3/bin/pip3"
+
 check_python() {
-    if ! command -v python3 &> /dev/null; then
-        print_error "Python 3 is not installed"
+    if ! command -v $PYTHON &> /dev/null; then
+        print_error "Python 3 is not installed at $PYTHON"
         exit 1
     fi
 }
@@ -74,9 +77,9 @@ check_dependencies() {
     print_info "Checking dependencies..."
 
     # Check Python packages
-    python3 -c "import flask" 2>/dev/null || {
+    $PYTHON -c "import flask" 2>/dev/null || {
         print_error "Flask not installed. Installing..."
-        pip3 install flask flask-socketio schedule psutil
+        $PIP install flask flask-socketio schedule psutil
     }
 
     print_success "Dependencies OK"
@@ -114,7 +117,7 @@ start_bot() {
 
     print_info "Starting MAJ-PROJEKT-MONITOR Bot..."
 
-    nohup python3 "$BOT_SCRIPT" > "$BOT_LOG" 2>&1 &
+    nohup $PYTHON "$BOT_SCRIPT" > "$BOT_LOG" 2>&1 &
     BOT_PID=$!
     echo $BOT_PID > "$BOT_PID_FILE"
 
@@ -138,7 +141,7 @@ start_web() {
 
     print_info "Starting MAJ-PROJEKT-MONITOR Web Dashboard..."
 
-    nohup python3 "$WEB_SCRIPT" > "$WEB_LOG" 2>&1 &
+    nohup $PYTHON "$WEB_SCRIPT" > "$WEB_LOG" 2>&1 &
     WEB_PID=$!
     echo $WEB_PID > "$WEB_PID_FILE"
 
@@ -238,7 +241,7 @@ show_status() {
 
 run_analysis() {
     print_info "Running analysis on all projects..."
-    python3 "$BOT_SCRIPT" --once
+    $PYTHON "$BOT_SCRIPT" --once
     print_success "Analysis complete"
 }
 
@@ -253,7 +256,7 @@ create_project() {
 
     print_info "Creating project: $PROJECT_NAME"
 
-    python3 "$MONITOR_SCRIPT" create "$PROJECT_NAME" "$PROJECT_PATH" \
+    $PYTHON "$MONITOR_SCRIPT" create "$PROJECT_NAME" "$PROJECT_PATH" \
         --description "$DESCRIPTION" \
         ${GITHUB:+--github "$GITHUB"} \
         ${CUSTOMER:+--customer "$CUSTOMER"} \
@@ -262,7 +265,7 @@ create_project() {
     print_success "Project created"
 
     # Scan files
-    PROJECT_ID=$(python3 -c "
+    PROJECT_ID=$($PYTHON -c "
 import sys
 sys.path.insert(0, '$SCRIPT_DIR')
 from maj_projekt_monitor import ProjectDatabase
@@ -273,7 +276,7 @@ print(project.id if project else 0)
 
     if [ "$PROJECT_ID" != "0" ]; then
         print_info "Scanning project files..."
-        python3 "$MONITOR_SCRIPT" scan "$PROJECT_ID"
+        $PYTHON "$MONITOR_SCRIPT" scan "$PROJECT_ID"
         print_success "Project setup complete (ID: $PROJECT_ID)"
     fi
 }

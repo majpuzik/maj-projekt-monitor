@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 import subprocess
 import tempfile
 import shutil
+import html
 
 # Try to import PDF libraries
 try:
@@ -31,6 +32,8 @@ try:
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle, Image
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
     REPORTLAB_AVAILABLE = True
 except ImportError:
     REPORTLAB_AVAILABLE = False
@@ -38,6 +41,33 @@ except ImportError:
 
 # Configuration
 CDB_PATH = "/home/puzik/almquist-central-log/almquist.db"
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+def register_unicode_fonts():
+    """Register Unicode-compatible TrueType fonts for Czech language support"""
+    if not REPORTLAB_AVAILABLE:
+        return False
+
+    try:
+        # Register DejaVu fonts (support Czech diacritics)
+        pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        return True
+    except Exception as e:
+        print(f"⚠️  Warning: Could not register Unicode fonts: {e}")
+        print(f"   Czech diacritics may not display correctly in PDF")
+        return False
+
+def escape_for_pdf(text: str) -> str:
+    """Escape text for safe use in PDF Paragraph elements"""
+    if not text:
+        return ""
+    # Escape HTML entities
+    text = html.escape(str(text))
+    return text
 
 # ============================================================================
 # Export Functions
@@ -406,6 +436,10 @@ class ProjectExporter:
             print("❌ ReportLab není nainstalován. Použijte: pip3 install reportlab")
             return None
 
+        # Register Unicode fonts for Czech support
+        fonts_ok = register_unicode_fonts()
+        font_family = 'DejaVuSans' if fonts_ok else 'Helvetica'
+
         if not output_path:
             output_path = f"/home/puzik/MAJ_PROJECT_{self.project_id}_EXPORT_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
@@ -417,11 +451,12 @@ class ProjectExporter:
         # Container for PDF elements
         story = []
 
-        # Styles
+        # Styles with Unicode font support
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
+            fontName=font_family,
             fontSize=24,
             textColor=colors.HexColor('#1a73e8'),
             spaceAfter=30,
@@ -430,10 +465,23 @@ class ProjectExporter:
         heading_style = ParagraphStyle(
             'CustomHeading',
             parent=styles['Heading2'],
+            fontName=font_family,
             fontSize=16,
             textColor=colors.HexColor('#1a73e8'),
             spaceAfter=12,
             spaceBefore=12
+        )
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontName=font_family,
+            fontSize=10
+        )
+        heading3_style = ParagraphStyle(
+            'CustomHeading3',
+            parent=styles['Heading3'],
+            fontName=font_family,
+            fontSize=12
         )
 
         # Title Page
@@ -459,7 +507,8 @@ class ProjectExporter:
             ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e8f0fe')),
             ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#1a73e8')),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 0), (0, -1), font_family + '-Bold' if fonts_ok else font_family + '-Bold' if fonts_ok else 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), font_family if fonts_ok else 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('GRID', (0, 0), (-1, -1), 1, colors.grey),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -469,7 +518,7 @@ class ProjectExporter:
 
         # Description
         story.append(Paragraph("Popis projektu", heading_style))
-        story.append(Paragraph(self.project['description'], styles['Normal']))
+        story.append(Paragraph(escape_for_pdf(self.project['description']), normal_style))
         story.append(Spacer(1, 0.5*cm))
 
         story.append(PageBreak())
@@ -479,13 +528,16 @@ class ProjectExporter:
         if specs:
             story.append(Paragraph("Zadání a specifikace", heading_style))
             for spec in specs:
-                story.append(Paragraph(f"<b>{spec['title']}</b>", styles['Heading3']))
-                story.append(Paragraph(f"<i>Vytvořeno: {spec['created_at']}</i>", styles['Normal']))
+                story.append(Paragraph(f"<b>{escape_for_pdf(spec['title'])}</b>", heading3_style))
+                story.append(Paragraph(f"<i>Vytvořeno: {escape_for_pdf(spec['created_at'])}</i>", normal_style))
                 story.append(Spacer(1, 0.2*cm))
                 # Split content into paragraphs
                 for para in spec['content'].split('\n\n'):
                     if para.strip():
-                        story.append(Paragraph(para.replace('\n', '<br/>'), styles['Normal']))
+                        # Escape text and then add <br/> for newlines
+                        escaped = escape_for_pdf(para)
+                        escaped = escaped.replace('\n', '<br/>')
+                        story.append(Paragraph(escaped, normal_style))
                         story.append(Spacer(1, 0.3*cm))
             story.append(PageBreak())
 
@@ -506,7 +558,7 @@ class ProjectExporter:
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a73e8')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), font_family + '-Bold' if fonts_ok else 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 1, colors.grey),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -515,16 +567,16 @@ class ProjectExporter:
             story.append(Spacer(1, 0.5*cm))
 
             # Recent tests
-            story.append(Paragraph("Poslední testy:", styles['Heading3']))
+            story.append(Paragraph("Poslední testy:", heading3_style))
             for test in tests[:10]:
                 status_icon = "✓" if test['status'] == 'passed' else "✗"
                 color = 'green' if test['status'] == 'passed' else 'red'
                 story.append(Paragraph(
-                    f"<font color='{color}'>{status_icon}</font> <b>{test['test_name']}</b> ({test['test_type']}) - {test['timestamp']}",
-                    styles['Normal']
+                    f"<font color='{color}'>{status_icon}</font> <b>{escape_for_pdf(test['test_name'])}</b> ({escape_for_pdf(test['test_type'])}) - {escape_for_pdf(test['timestamp'])}",
+                    normal_style
                 ))
                 if test.get('error_message'):
-                    story.append(Paragraph(f"   Chyba: {test['error_message']}", styles['Normal']))
+                    story.append(Paragraph(f"   Chyba: {escape_for_pdf(test['error_message'])}", normal_style))
                 story.append(Spacer(1, 0.2*cm))
 
             story.append(PageBreak())
@@ -549,7 +601,7 @@ class ProjectExporter:
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a73e8')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), font_family + '-Bold' if fonts_ok else 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, -1), 10),
                 ('GRID', (0, 0), (-1, -1), 1, colors.grey),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -570,14 +622,14 @@ class ProjectExporter:
             "☐ Zálohovací strategie definována",
         ]
         for item in checklist:
-            story.append(Paragraph(item, styles['Normal']))
+            story.append(Paragraph(item, normal_style))
             story.append(Spacer(1, 0.2*cm))
 
         # Footer
         story.append(Spacer(1, 1*cm))
         story.append(Paragraph(
             f"<i>Vygenerováno MAJ-PROJEKT-MONITOR dne {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</i>",
-            styles['Normal']
+            normal_style
         ))
 
         # Build PDF

@@ -4,7 +4,8 @@ ALMQUIST RAG - Autonomous Web Crawler
 Inteligentní crawler pro průběžné monitorování českých oficiálních webů
 """
 
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -19,8 +20,8 @@ import json
 class AlmquistAutonomousCrawler:
     """Autonomní web crawler s prioritní frontou a source scoring"""
 
-    def __init__(self, db_path="/home/puzik/almquist_sources.db"):
-        self.db_path = db_path
+    def __init__(self, db_url="postgresql://almquist_user:almquist_secure_password_2025@localhost:5432/almquist_db"):
+        self.db_url = db_url
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'AlmquistBot/1.0 (+https://almquist.cz/bot)'
@@ -34,13 +35,13 @@ class AlmquistAutonomousCrawler:
 
     def init_database(self):
         """Inicializace databáze"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        # Sources registry
+        # Sources registry (already exists in PostgreSQL, skip if exists)
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS sources (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS autonomous_sources (
+            id SERIAL PRIMARY KEY,
             url TEXT UNIQUE NOT NULL,
             domain TEXT,
             source_type TEXT,
@@ -48,17 +49,17 @@ class AlmquistAutonomousCrawler:
             title TEXT,
             description TEXT,
 
-            discovered_at DATETIME,
+            discovered_at TIMESTAMP,
             discovered_by TEXT,
             parent_source_id INTEGER,
 
-            last_crawled_at DATETIME,
+            last_crawled_at TIMESTAMP,
             crawl_frequency_hours INTEGER DEFAULT 168,
-            next_crawl_at DATETIME,
+            next_crawl_at TIMESTAMP,
             crawl_count INTEGER DEFAULT 0,
 
-            is_active BOOLEAN DEFAULT 1,
-            is_whitelisted BOOLEAN DEFAULT 0,
+            is_active BOOLEAN DEFAULT true,
+            is_whitelisted BOOLEAN DEFAULT false,
 
             quality_score REAL DEFAULT 0.5,
             information_density REAL,
@@ -67,16 +68,16 @@ class AlmquistAutonomousCrawler:
 
             profession_relevance TEXT,
 
-            FOREIGN KEY (parent_source_id) REFERENCES sources(id)
+            FOREIGN KEY (parent_source_id) REFERENCES autonomous_sources(id)
         )
         ''')
 
         # Crawl history
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS crawl_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS autonomous_crawl_history (
+            id SERIAL PRIMARY KEY,
             source_id INTEGER NOT NULL,
-            crawled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            crawled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
             status TEXT,
             http_status INTEGER,
@@ -89,16 +90,16 @@ class AlmquistAutonomousCrawler:
 
             response_time_ms INTEGER,
 
-            FOREIGN KEY (source_id) REFERENCES sources(id)
+            FOREIGN KEY (source_id) REFERENCES autonomous_sources(id)
         )
         ''')
 
         # Content changes
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS content_changes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS autonomous_content_changes (
+            id SERIAL PRIMARY KEY,
             source_id INTEGER NOT NULL,
-            detected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
             change_type TEXT,
             change_summary TEXT,
@@ -106,18 +107,18 @@ class AlmquistAutonomousCrawler:
 
             affected_professions TEXT,
 
-            processed BOOLEAN DEFAULT 0,
+            processed BOOLEAN DEFAULT false,
 
-            FOREIGN KEY (source_id) REFERENCES sources(id)
+            FOREIGN KEY (source_id) REFERENCES autonomous_sources(id)
         )
         ''')
 
         # Discovered links
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS discovered_links (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS autonomous_discovered_links (
+            id SERIAL PRIMARY KEY,
             url TEXT UNIQUE NOT NULL,
-            discovered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             discovered_from_source_id INTEGER,
 
             relevance_score REAL,
@@ -127,17 +128,17 @@ class AlmquistAutonomousCrawler:
             status TEXT DEFAULT 'pending',
             promoted_to_source_id INTEGER,
 
-            FOREIGN KEY (discovered_from_source_id) REFERENCES sources(id),
-            FOREIGN KEY (promoted_to_source_id) REFERENCES sources(id)
+            FOREIGN KEY (discovered_from_source_id) REFERENCES autonomous_sources(id),
+            FOREIGN KEY (promoted_to_source_id) REFERENCES autonomous_sources(id)
         )
         ''')
 
         # Extracted information chunks
         cursor.execute('''
-        CREATE TABLE IF NOT EXISTS extracted_info (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS autonomous_extracted_info (
+            id SERIAL PRIMARY KEY,
             source_id INTEGER NOT NULL,
-            extracted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            extracted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
             text_content TEXT,
             chunk_type TEXT,
@@ -145,10 +146,10 @@ class AlmquistAutonomousCrawler:
 
             profession_relevance TEXT,
 
-            added_to_rag BOOLEAN DEFAULT 0,
+            added_to_rag BOOLEAN DEFAULT false,
             rag_chunk_id TEXT,
 
-            FOREIGN KEY (source_id) REFERENCES sources(id)
+            FOREIGN KEY (source_id) REFERENCES autonomous_sources(id)
         )
         ''')
 
@@ -223,21 +224,21 @@ class AlmquistAutonomousCrawler:
             }
         ]
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         for source in seed_sources:
             domain = urlparse(source['url']).netloc
 
             try:
                 cursor.execute('''
-                INSERT OR IGNORE INTO sources (
+                INSERT INTO autonomous_sources (
                     url, domain, title, source_type,
                     authority_score, crawl_frequency_hours,
                     is_whitelisted, profession_relevance,
                     discovered_at, discovered_by,
                     next_crawl_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ''', (
                     source['url'],
                     domain,
@@ -289,11 +290,10 @@ class AlmquistAutonomousCrawler:
 
     def crawl_source(self, source_id):
         """Crawl jednoho zdroje"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        cursor.execute('SELECT * FROM sources WHERE id = ?', (source_id,))
+        cursor.execute('SELECT * FROM autonomous_sources WHERE id = %s', (source_id,))
         source = dict(cursor.fetchone())
 
         url = source['url']
@@ -379,13 +379,13 @@ class AlmquistAutonomousCrawler:
 
     def _detect_changes(self, source_id, content, content_hash):
         """Detect změny od posledního crawlu"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         # Get last successful crawl
         cursor.execute('''
-        SELECT content_hash FROM crawl_history
-        WHERE source_id = ? AND status = 'success'
+        SELECT content_hash FROM autonomous_crawl_history
+        WHERE source_id = %s AND status = 'success'
         ORDER BY crawled_at DESC
         LIMIT 1
         ''', (source_id,))
@@ -411,16 +411,16 @@ class AlmquistAutonomousCrawler:
         is_significant = self._analyze_significance(content)
 
         cursor.execute('''
-        INSERT INTO content_changes (
+        INSERT INTO autonomous_content_changes (
             source_id, detected_at, change_type,
             is_significant, processed
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s)
         ''', (
             source_id,
             datetime.now(),
             'content_updated',
             is_significant,
-            0
+            False
         ))
 
         conn.commit()
@@ -541,15 +541,15 @@ class AlmquistAutonomousCrawler:
         if not extracted_data:
             return
 
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         for chunk in extracted_data:
             cursor.execute('''
-            INSERT INTO extracted_info (
+            INSERT INTO autonomous_extracted_info (
                 source_id, extracted_at, text_content, chunk_type,
                 relevance_score, profession_relevance, added_to_rag
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 source_id,
                 datetime.now(),
@@ -557,7 +557,7 @@ class AlmquistAutonomousCrawler:
                 chunk['chunk_type'],
                 chunk['relevance_score'],
                 chunk.get('profession_relevance'),
-                0  # Not yet added to RAG
+                False  # Not yet added to RAG
             ))
 
         conn.commit()
@@ -568,8 +568,8 @@ class AlmquistAutonomousCrawler:
         soup = BeautifulSoup(content, 'html.parser')
 
         links_found = 0
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         for link in soup.find_all('a', href=True):
             href = link['href']
@@ -591,11 +591,11 @@ class AlmquistAutonomousCrawler:
             if relevance > 0.3:  # Threshold
                 try:
                     cursor.execute('''
-                    INSERT OR IGNORE INTO discovered_links (
+                    INSERT INTO autonomous_discovered_links (
                         url, discovered_at, discovered_from_source_id,
                         relevance_score, context_text, anchor_text,
                         status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ''', (
                         full_url,
                         datetime.now(),
@@ -668,15 +668,15 @@ class AlmquistAutonomousCrawler:
                    content_hash=None, content_length=None,
                    chunks_extracted=0, links_found=0):
         """Log crawl attempt"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         cursor.execute('''
-        INSERT INTO crawl_history (
+        INSERT INTO autonomous_crawl_history (
             source_id, crawled_at, status, http_status,
             content_hash, content_length,
             chunks_extracted, links_found, response_time_ms
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             source_id,
             datetime.now(),
@@ -691,10 +691,10 @@ class AlmquistAutonomousCrawler:
 
         # Update crawl count
         cursor.execute('''
-        UPDATE sources
+        UPDATE autonomous_sources
         SET crawl_count = crawl_count + 1,
-            last_crawled_at = ?
-        WHERE id = ?
+            last_crawled_at = %s
+        WHERE id = %s
         ''', (datetime.now(), source_id))
 
         conn.commit()
@@ -702,15 +702,15 @@ class AlmquistAutonomousCrawler:
 
     def _update_source_after_crawl(self, source_id, crawl_frequency_hours):
         """Update next_crawl_at"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         next_crawl = datetime.now() + timedelta(hours=crawl_frequency_hours)
 
         cursor.execute('''
-        UPDATE sources
-        SET next_crawl_at = ?
-        WHERE id = ?
+        UPDATE autonomous_sources
+        SET next_crawl_at = %s
+        WHERE id = %s
         ''', (next_crawl, source_id))
 
         conn.commit()
@@ -718,19 +718,18 @@ class AlmquistAutonomousCrawler:
 
     def get_sources_to_crawl(self, limit=10):
         """Get sources ready to crawl (prioritní fronta)"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         cursor.execute('''
-        SELECT * FROM sources
-        WHERE is_active = 1
-        AND (next_crawl_at IS NULL OR next_crawl_at <= ?)
+        SELECT * FROM autonomous_sources
+        WHERE is_active = true
+        AND (next_crawl_at IS NULL OR next_crawl_at <= %s)
         ORDER BY
             is_whitelisted DESC,
             quality_score DESC,
             next_crawl_at ASC
-        LIMIT ?
+        LIMIT %s
         ''', (datetime.now(), limit))
 
         sources = [dict(row) for row in cursor.fetchall()]
@@ -746,12 +745,11 @@ class AlmquistAutonomousCrawler:
         - Freshness (20%): Jak často se aktualizuje
         - RAG Contribution (15%): Kolik chunků skutečně v RAG
         """
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
         # Get source data
-        cursor.execute('SELECT * FROM sources WHERE id = ?', (source_id,))
+        cursor.execute('SELECT * FROM autonomous_sources WHERE id = %s', (source_id,))
         source = dict(cursor.fetchone())
 
         # 1. Authority Score (40%) - already set manually
@@ -760,12 +758,12 @@ class AlmquistAutonomousCrawler:
         # 2. Info Density (25%) - chunks per successful crawl
         cursor.execute('''
         SELECT AVG(chunks_extracted) as avg_chunks
-        FROM crawl_history
-        WHERE source_id = ? AND status = 'success'
+        FROM autonomous_crawl_history
+        WHERE source_id = %s AND status = 'success'
         ''', (source_id,))
 
         row = cursor.fetchone()
-        avg_chunks = row['avg_chunks'] if row and row['avg_chunks'] else 0
+        avg_chunks = float(row['avg_chunks']) if row and row['avg_chunks'] else 0.0
 
         # Normalize: 5+ chunks = perfect score
         info_density = min(avg_chunks / 5.0, 1.0)
@@ -773,8 +771,8 @@ class AlmquistAutonomousCrawler:
         # 3. Freshness (20%) - update frequency
         cursor.execute('''
         SELECT COUNT(*) as change_count
-        FROM content_changes
-        WHERE source_id = ? AND detected_at > datetime('now', '-30 days')
+        FROM autonomous_content_changes
+        WHERE source_id = %s AND detected_at > NOW() - INTERVAL '30 days'
         ''', (source_id,))
 
         row = cursor.fetchone()
@@ -798,11 +796,11 @@ class AlmquistAutonomousCrawler:
 
         # Update database
         cursor.execute('''
-        UPDATE sources
-        SET quality_score = ?,
-            information_density = ?,
-            freshness_score = ?
-        WHERE id = ?
+        UPDATE autonomous_sources
+        SET quality_score = %s,
+            information_density = %s,
+            freshness_score = %s
+        WHERE id = %s
         ''', (quality_score, info_density, freshness, source_id))
 
         conn.commit()
@@ -812,10 +810,10 @@ class AlmquistAutonomousCrawler:
 
     def update_all_quality_scores(self):
         """Přepočítat quality scores pro všechny zdroje"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = psycopg2.connect(self.db_url)
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 
-        cursor.execute('SELECT id FROM sources WHERE is_active = 1')
+        cursor.execute('SELECT id FROM autonomous_sources WHERE is_active = true')
         source_ids = [row[0] for row in cursor.fetchall()]
         conn.close()
 
@@ -882,9 +880,9 @@ def main():
 
     # Seed sources if empty
     print("Checking sources...")
-    conn = sqlite3.connect(crawler.db_path)
-    cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM sources')
+    conn = psycopg2.connect(crawler.db_url)
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    cursor.execute('SELECT COUNT(*) FROM autonomous_sources')
     count = cursor.fetchone()[0]
     conn.close()
 

@@ -53,3 +53,4 @@ rag_monitor.pid
 monitor_memory.pid
 *_EXPORT.pdf
 exported_notes_*/
+.aider*

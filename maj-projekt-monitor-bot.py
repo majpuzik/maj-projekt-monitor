@@ -564,6 +564,11 @@ class ProjectBot:
 
     def attempt_auto_fixes(self, project_id: int, analysis):
         """Attempt to automatically fix common issues"""
+        # Check if we should run AI requirements analyzer
+        project = self.db.get_project(project_id)
+        if project and project.phase == ProjectPhase.PLANNING.value:
+            self.attempt_ai_requirements_analysis(project_id)
+
         if analysis.tests_failed > 0:
             logger.info("  🔧 Attempting auto-fixes for failing tests...")
             # TODO: Implement smart fixes
@@ -571,6 +576,35 @@ class ProjectBot:
         if analysis.quality_score < Config.QUALITY_ACCEPTABLE:
             logger.info("  🔧 Attempting quality improvements...")
             # TODO: Auto-format code, add docstrings, etc.
+
+    def attempt_ai_requirements_analysis(self, project_id: int):
+        """Run AI requirements analyzer if needed"""
+        # Check if "Define requirements" TODO exists and is not done
+        conn = sqlite3.connect(Config.CDB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) FROM project_todos
+            WHERE project_id = ?
+            AND (task LIKE '%Define%requirements%' OR task LIKE '%Define%scope%')
+            AND status != 'done'
+        """, (project_id,))
+
+        needs_analysis = cursor.fetchone()[0] > 0
+        conn.close()
+
+        if needs_analysis:
+            logger.info("  🤖 Running AI Requirements Analyzer...")
+            try:
+                # Import and run analyzer
+                import sys
+                sys.path.insert(0, '/home/puzik')
+                from maj_projekt_monitor_ai_analyzer import ProjectAIAnalyzer
+
+                analyzer = ProjectAIAnalyzer(project_id)
+                analyzer.generate_requirements_report()
+                logger.info("  ✅ Requirements analysis complete")
+            except Exception as e:
+                logger.error(f"  ❌ AI analyzer failed: {e}")
 
     # ========================================================================
     # Status Reporting
